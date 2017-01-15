@@ -1,87 +1,83 @@
-buildscript {
-    repositories {
-        jcenter()
-    }
-    dependencies {
-        classpath "com.jfrog.bintray.gradle:gradle-bintray-plugin:1.2"
-    }
-}
-
 // apply the plugin with its class name rather than its Id to work around gradle limitation of
 // not being able to find the plugin by Id despite the dependencies being added right above. Gradle
 // is currently not capable of loading plugins by Id if the dependency is anywhere else than
 // in the main project build.gradle. This file is "imported" into the project's build.gradle
 // through a "apply from:".
-apply plugin: com.jfrog.bintray.gradle.BintrayPlugin
-apply plugin: 'maven-publish'
+apply plugin: 'com.github.dcendents.android-maven'
+apply plugin: 'com.jfrog.bintray'
 
-project.ext.group = 'com.android.volley'
-project.ext.archivesBaseName = 'volley'
-project.ext.version = '1.0.0'
-project.ext.pomDesc = 'Volley Android library'
+version = "1.0.1"
+def siteUrl = 'https://github.com/freedomofme/HandyVolley'  // 项目的主页
+def gitUrl = 'https://github.com/freedomofme/HandyVolley.git'   // Git仓库的url
+def issueURL = 'https://github.com/freedomofme/HandyVolley/issues'
 
-task sourcesJar(type: Jar) {
-    classifier = 'sources'
-    from android.sourceSets.main.java.srcDirs
+group = "site.okhttp.codeyel"            // Maven Group ID for the artifact，一般填你唯一的包名
+install {
+    repositories.mavenInstaller {
+        // This generates POM.xml with proper parameters
+        pom {
+            project {
+                packaging 'aar'
+                // Add your description here
+                name 'Handy android volley library, easy to use, better performance'     //项目的描述 你可以多写一点
+                url siteUrl
+                // Set your license
+                licenses {
+                    license {
+                        name 'The Apache Software License, Version 2.0'
+                        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id 'coderyel'
+                        name 'codeyel'
+                        email 'xiegeixiong@gmail.com'
+                    }
+                }
+                scm {
+                    connection gitUrl
+                    developerConnection gitUrl
+                    url siteUrl
+                }
+            }
+        }
+    }
 }
-
+task sourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    classifier = 'sources'
+}
 task javadoc(type: Javadoc) {
     source = android.sourceSets.main.java.srcDirs
     classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
 }
-
 task javadocJar(type: Jar, dependsOn: javadoc) {
     classifier = 'javadoc'
     from javadoc.destinationDir
 }
-
 artifacts {
     archives javadocJar
     archives sourcesJar
 }
-
-publishing {
-    publications {
-        library(MavenPublication) {
-            groupId project.ext.group
-            artifactId project.ext.archivesBaseName
-            version project.ext.version
-
-            // Release AAR, Sources, and JavaDoc
-            artifact "$buildDir/outputs/aar/volley-release.aar"
-            artifact sourcesJar
-            artifact javadocJar
-        }
+Properties properties = new Properties()
+properties.load(project.rootProject.file('local.properties').newDataInputStream())
+bintray {
+    user = properties.getProperty("bintray.user")
+    key = properties.getProperty("bintray.apikey")
+    configurations = ['archives']
+    pkg {
+        repo = "maven"
+        name = "handyvolley"    //发布到JCenter上的项目名字
+        websiteUrl = siteUrl
+        vcsUrl = gitUrl
+        issueTrackerUrl = issueURL
+        licenses = ["Apache-2.0"]
+        publish = true
     }
 }
-
-bintray {
-    user = System.env.BINTRAY_USER
-    key = System.env.BINTRAY_USER_KEY
-
-    publications = [ 'library' ]
-
-    publish = project.has("release")
-    pkg {
-        userOrg = 'android'
-        repo = 'android-utils'
-        group = project.ext.group
-        name = project.ext.group + '.' + project.ext.archivesBaseName
-        desc = project.ext.pomDesc
-        licenses = [ 'Apache-2.0' ]
-        websiteUrl = 'https://tools.android.com'
-        issueTrackerUrl = 'https://code.google.com/p/android/'
-        vcsUrl = 'https://android.googlesource.com/platform/frameworks/volley.git'
-        labels = ['android', 'volley', 'network']
-        publicDownloadNumbers = true
-
-        version {
-            name = project.ext.version
-            desc = project.ext.pomDesc + ' version ' + project.ext.version
-            gpg {
-                sign = true
-                passphrase = System.env.GPG_PASSPHRASE
-            }
-        }
-    }
+tasks.withType(Javadoc) {
+    options.addStringOption('Xdoclint:none', '-quiet')
+    options.addStringOption('encoding', 'UTF-8')
+    options.addStringOption('charSet', 'UTF-8')
 }

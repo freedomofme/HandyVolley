@@ -105,6 +105,12 @@ public abstract class Request<T> implements Comparable<Request<T>> {
     /** An opaque token tagging this request; used for bulk cancellation. */
     private Object mTag;
 
+    /** this request's default Soft time limit(unit seconds) if no cache control set by web severs*/
+    private int mDefaultSoftTtl = 0;
+
+    /** this request's default time limit(unit seconds) if no cache control set by web severs*/
+    private int mDefaultTtl = 0;
+
     /**
      * Creates a new request with the given URL and error listener.  Note that
      * the normal response listener is not provided here as delivery of responses
@@ -473,6 +479,28 @@ public abstract class Request<T> implements Comparable<Request<T>> {
      */
     public final boolean shouldCache() {
         return mShouldCache;
+    }
+
+    /**
+     * Return this request's soft time limit (unit seconds).
+     */
+    public int getDefaultSoftTtl() {
+        return mDefaultSoftTtl;
+    }
+
+    /**
+     * Returns this request's the time limit (unit seconds).
+     */
+    public int getDefaultTtl() {
+        return mDefaultTtl;
+    }
+
+    /**
+     * Returns true means use the default TTL and soft TTL regardless of the server's cache control.
+     * Returns false means server's cache control has higher priority.
+     */
+    public boolean shouldLocalCacheControl() {
+        return false;
     }
 
     /**

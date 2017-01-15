@@ -22,6 +22,7 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.net.http.AndroidHttpClient;
 import android.os.Build;
 
+import com.android.volley.Cache;
 import com.android.volley.Network;
 import com.android.volley.RequestQueue;
 
@@ -37,9 +38,10 @@ public class Volley {
      *
      * @param context A {@link Context} to use for creating the cache dir.
      * @param stack An {@link HttpStack} to use for the network, or null for default.
+     * @param maxCacheSizeInBytes A to use for the size of disk cache, or 0 for default.
      * @return A started {@link RequestQueue} instance.
      */
-    public static RequestQueue newRequestQueue(Context context, HttpStack stack) {
+    public static RequestQueue newRequestQueue(Context context, HttpStack stack, int maxCacheSizeInBytes) {
         File cacheDir = new File(context.getCacheDir(), DEFAULT_CACHE_DIR);
 
         String userAgent = "volley/0";
@@ -62,10 +64,29 @@ public class Volley {
 
         Network network = new BasicNetwork(stack);
 
-        RequestQueue queue = new RequestQueue(new DiskBasedCache(cacheDir), network);
+        Cache diskCache;
+        if (maxCacheSizeInBytes <= 0) {
+            diskCache = new DiskBasedCache(cacheDir);
+        } else {
+            diskCache = new DiskBasedCache(cacheDir, maxCacheSizeInBytes);
+        }
+
+        RequestQueue queue = new RequestQueue(diskCache, network);
         queue.start();
 
         return queue;
+    }
+
+
+    /**
+     * Creates a default instance of the worker pool and calls {@link RequestQueue#start()} on it.
+     *
+     * @param context A {@link Context} to use for creating the cache dir.
+     * @param stack An {@link HttpStack} to use for the network, or null for default.
+     * @return A started {@link RequestQueue} instance.
+     */
+    public static RequestQueue newRequestQueue(Context context, HttpStack stack) {
+        return newRequestQueue(context, stack, 0);
     }
 
     /**

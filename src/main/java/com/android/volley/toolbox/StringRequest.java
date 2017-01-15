@@ -68,6 +68,12 @@ public class StringRequest extends Request<String> {
         } catch (UnsupportedEncodingException e) {
             parsed = new String(response.data);
         }
-        return Response.success(parsed, HttpHeaderParser.parseCacheHeaders(response));
+
+        // So far the cacheEntry will be never used if the method of shouldCache return false
+        // so quick return
+        if (!shouldCache()) {
+            return Response.success(parsed, null);
+        }
+        return Response.success(parsed, HttpHeaderParser.parseCacheHeaders(response, parsed, shouldLocalCacheControl(), getDefaultTtl(), getDefaultSoftTtl()));
     }
 }

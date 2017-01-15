@@ -207,10 +207,17 @@ public class ImageRequest extends Request<Bitmap> {
             }
         }
 
+
+
         if (bitmap == null) {
             return Response.error(new ParseError(response));
         } else {
-            return Response.success(bitmap, HttpHeaderParser.parseCacheHeaders(response));
+            // So far the cacheEntry will be never used if the method of shouldCache return false
+            // so quick return
+            if (!shouldCache()) {
+                return Response.success(bitmap, null);
+            }
+            return Response.success(bitmap, HttpHeaderParser.parseCacheHeaders(response, bitmap, shouldLocalCacheControl(), getDefaultTtl(), getDefaultSoftTtl()));
         }
     }
 

@@ -16,8 +16,12 @@
 
 package com.android.volley.toolbox;
 
+import android.graphics.Bitmap;
+import android.util.Log;
+
 import com.android.volley.Cache;
 import com.android.volley.NetworkResponse;
+import com.android.volley.VolleyLog;
 
 import org.apache.http.impl.cookie.DateParseException;
 import org.apache.http.impl.cookie.DateUtils;
@@ -106,6 +110,112 @@ public class HttpHeaderParser {
             // Default semantic for Expire header in HTTP specification is softExpire.
             softExpire = now + (serverExpires - serverDate);
             finalExpire = softExpire;
+        }
+
+
+        Cache.Entry entry = new Cache.Entry();
+        entry.data = response.data;
+        entry.etag = serverEtag;
+        entry.softTtl = softExpire;
+        entry.ttl = finalExpire;
+        entry.serverDate = serverDate;
+        entry.lastModified = lastModified;
+        entry.responseHeaders = headers;
+
+        return entry;
+    }
+
+    /**
+     * Extracts a {@link Cache.Entry} from a {@link NetworkResponse}.
+     *
+     * @param response The network response to parse headers from
+     * @return a cache entry for the given response, or null if the response is not cacheable.
+     */
+    public static <T> Cache.Entry parseCacheHeaders(NetworkResponse response, T parsed, boolean localCacheControl, int mDefaultTtl, int mDefaultSoftTtl) {
+        long now = System.currentTimeMillis();
+
+        Map<String, String> headers = response.headers;
+
+        long serverDate = 0;
+        long lastModified = 0;
+        long serverExpires = 0;
+        long softExpire = now + mDefaultSoftTtl;
+        long finalExpire = now + mDefaultTtl;
+        long maxAge = 0;
+        long staleWhileRevalidate = 0;
+        boolean hasCacheControl = false;
+        boolean mustRevalidate = false;
+
+        String serverEtag = null;
+        String headerValue;
+
+        headerValue = headers.get("Date");
+        if (headerValue != null) {
+            serverDate = parseDateAsEpoch(headerValue);
+        }
+
+        headerValue = headers.get("Cache-Control");
+        if (headerValue != null) {
+            hasCacheControl = true;
+            String[] tokens = headerValue.split(",");
+            for (int i = 0; i < tokens.length; i++) {
+                String token = tokens[i].trim();
+                if (token.equals("no-cache") || token.equals("no-store")) {
+                    if (localCacheControl)
+                        continue;
+                    else
+                        return null;
+                } else if (token.startsWith("max-age=")) {
+                    try {
+                        maxAge = Long.parseLong(token.substring(8));
+                    } catch (Exception e) {
+                    }
+                } else if (token.startsWith("stale-while-revalidate=")) {
+                    try {
+                        staleWhileRevalidate = Long.parseLong(token.substring(23));
+                    } catch (Exception e) {
+                    }
+                } else if (token.equals("must-revalidate") || token.equals("proxy-revalidate")) {
+                    mustRevalidate = true;
+                }
+            }
+        }
+
+        headerValue = headers.get("Expires");
+        if (headerValue != null) {
+            serverExpires = parseDateAsEpoch(headerValue);
+        }
+
+        headerValue = headers.get("Last-Modified");
+        if (headerValue != null) {
+            lastModified = parseDateAsEpoch(headerValue);
+        }
+
+        serverEtag = headers.get("ETag");
+
+        // Cache-Control takes precedence over an Expires header, even if both exist and Expires
+        // is more restrictive.
+        if (hasCacheControl) {
+            softExpire = now + maxAge * 1000;
+            finalExpire = mustRevalidate
+                    ? softExpire
+                    : softExpire + staleWhileRevalidate * 1000;
+        } else if (serverDate > 0 && serverExpires >= serverDate) {
+            // Default semantic for Expire header in HTTP specification is softExpire.
+            softExpire = now + (serverExpires - serverDate);
+            finalExpire = softExpire;
+        }
+
+        if (localCacheControl) {
+            softExpire = now + mDefaultSoftTtl;
+            finalExpire = now + mDefaultTtl;
+        }
+
+        Log.d(VolleyLog.TAG, "softExpire: " + (softExpire - now) + ",finalExpire: " + (finalExpire - now));
+        Log.d(VolleyLog.TAG, parsed instanceof Bitmap ? "true" : "false");
+        // Never write images into disk which can never be reused.
+        if (softExpire == 0 && finalExpire == 0 && parsed instanceof Bitmap) {
+            return null;
         }
 
         Cache.Entry entry = new Cache.Entry();
