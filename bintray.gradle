@@ -6,7 +6,7 @@
 apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: 'com.jfrog.bintray'
 
-version = "1.0.1"
+version = "1.0.2"
 def siteUrl = 'https://github.com/freedomofme/HandyVolley'  // 项目的主页
 def gitUrl = 'https://github.com/freedomofme/HandyVolley.git'   // Git仓库的url
 def issueURL = 'https://github.com/freedomofme/HandyVolley/issues'
