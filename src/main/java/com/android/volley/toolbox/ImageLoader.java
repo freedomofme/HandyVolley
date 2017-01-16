@@ -49,6 +49,18 @@ public class ImageLoader {
     /** The cache implementation to be used as an L1 cache before calling into volley. */
     private final ImageCache mCache;
 
+    /** this request's default Soft time limit(unit millisecond) if no cache control set by web severs*/
+    private int mDefaultSoftTtl = 0;
+
+    /** this request's default time limit(unit millisecond) if no cache control set by web severs*/
+    private int mDefaultTtl = 0;
+
+    /**
+     * Returns true means use the default TTL and soft TTL regardless of the server's cache control.
+     * Returns false means server's cache control has higher priority.
+     */
+    private boolean localCacheControl = false;
+
     /**
      * HashMap of Cache keys -> BatchedImageRequest used to track in-flight requests so
      * that we can coalesce multiple requests to the same URL into a single network request.
@@ -84,6 +96,22 @@ public class ImageLoader {
     public ImageLoader(RequestQueue queue, ImageCache imageCache) {
         mRequestQueue = queue;
         mCache = imageCache;
+    }
+
+    /**
+     * Constructs a new ImageLoader.
+     * @param queue The RequestQueue to use for making image requests.
+     * @param imageCache The cache to use as an L1 cache.
+     * @param  defaultSoftTtl this request's time limit (unit seconds).
+     * @param  defaultTtl this request's soft time limit (unit seconds).
+     * @param useLocalCacheControl Returns this request's cache control priority.
+     */
+    public ImageLoader(RequestQueue queue, ImageCache imageCache, int defaultSoftTtl, int defaultTtl, boolean useLocalCacheControl) {
+        mRequestQueue = queue;
+        mCache = imageCache;
+        mDefaultSoftTtl = defaultSoftTtl;
+        mDefaultTtl = defaultTtl;
+        localCacheControl = useLocalCacheControl;
     }
 
     /**
@@ -259,7 +287,14 @@ public class ImageLoader {
             public void onErrorResponse(VolleyError error) {
                 onGetImageError(cacheKey, error);
             }
-        });
+        }) {
+            @Override
+            public int getDefaultSoftTtl() { return mDefaultSoftTtl;}
+            @Override
+            public int getDefaultTtl() { return mDefaultTtl;}
+            @Override
+            public boolean shouldLocalCacheControl() { return localCacheControl;}
+        };
     }
 
     /**

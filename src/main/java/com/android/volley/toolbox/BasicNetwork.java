@@ -100,6 +100,7 @@ public class BasicNetwork implements Network {
 
                 responseHeaders = convertHeaders(httpResponse.getAllHeaders());
                 // Handle cache validation.
+                request.addMarker("statusCode is " + statusCode);
                 if (statusCode == HttpStatus.SC_NOT_MODIFIED) {
 
                     Entry entry = request.getCacheEntry();
