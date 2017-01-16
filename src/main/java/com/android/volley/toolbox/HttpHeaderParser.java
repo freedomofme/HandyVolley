@@ -212,11 +212,8 @@ public class HttpHeaderParser {
         }
 
         Log.d(VolleyLog.TAG, "softExpire: " + (softExpire - now) + ",finalExpire: " + (finalExpire - now));
-        Log.d(VolleyLog.TAG, parsed instanceof Bitmap ? "true" : "false");
-        // Never write images into disk which can never be reused.
-        if (softExpire == 0 && finalExpire == 0 && parsed instanceof Bitmap) {
-            return null;
-        }
+        Log.d(VolleyLog.TAG, "is ImageRequest?:" + (parsed instanceof Bitmap ? "true" : "false"));
+
 
         Cache.Entry entry = new Cache.Entry();
         entry.data = response.data;
